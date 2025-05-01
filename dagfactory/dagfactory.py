@@ -12,6 +12,8 @@ from airflow.models import DAG
 
 from dagfactory.dagbuilder import DagBuilder
 from dagfactory.exceptions import DagFactoryConfigException, DagFactoryException
+from dagfactory.translator import Translator
+from dagfactory.ir import DagIR
 
 # these are params that cannot be a dag name
 SYSTEM_PARAMS: List[str] = ["default", "task_groups"]
@@ -128,18 +130,46 @@ class DagFactory:
         """
         return self.config.get("default", {})
 
+    def to_ir(self) -> Dict[str, DagIR]:
+        """
+        Converts DAG configurations to intermediate representations (IR)
+
+        :returns: Dictionary mapping dag_id to DagIR
+        :rtype: Dict[str, DagIR]
+        """
+        dag_configs: Dict[str, Dict[str, Any]] = self.get_dag_configs()
+        global_default_args = self._global_default_args()
+        default_config: Dict[str, Any] = self.get_default_config()
+
+        # If global_default_args is None, then default_config will remain as is. Otherwise, we'll update the default args
+        if isinstance(global_default_args, dict):
+            default_config["default_args"] = {
+                **global_default_args.get("default_args", {}),
+                **default_config.get("default_args", {}),
+            }
+
+        dag_irs: Dict[str, DagIR] = {}
+
+        for dag_name, dag_config in dag_configs.items():
+            dag_config["task_groups"] = dag_config.get("task_groups", {})
+            translator = Translator(
+                dag_name=dag_name,
+                dag_config=dag_config,
+                default_config=default_config
+            )
+            dag_ir = translator.translate()
+            dag_irs[dag_name] = dag_ir
+
+        return dag_irs
+
     def build_dags(self) -> Dict[str, DAG]:
         """Build DAGs using the config file."""
         dag_configs: Dict[str, Dict[str, Any]] = self.get_dag_configs()
         global_default_args = self._global_default_args()
         default_config: Dict[str, Any] = self.get_default_config()
 
-        # If global_default_args is None, then default_config will remain as is. Otherwise, we'll (try) go ahead and
-        # update the default args using global_default_args
+        # If global_default_args is None, then default_config will remain as is. Otherwise, we'll update the default args
         if isinstance(global_default_args, dict):
-            # Previously, default_config was being overwritten completely to only container the default_args
-            # key-value pair. This was updated as part of issue-295 to not overwrite the entire default_config
-            # dictionary, and instead update the default_args key-value pair of the default_config dictionary
             default_config["default_args"] = {
                 **global_default_args.get("default_args", {}),
                 **default_config.get("default_args", {}),
@@ -149,6 +179,16 @@ class DagFactory:
 
         for dag_name, dag_config in dag_configs.items():
             dag_config["task_groups"] = dag_config.get("task_groups", {})
+            
+            # Create the intermediate representation first
+            translator = Translator(
+                dag_name=dag_name,
+                dag_config=dag_config,
+                default_config=default_config
+            )
+            dag_ir = translator.translate()
+            
+            # Then build the DAG from the IR
             dag_builder: DagBuilder = DagBuilder(
                 dag_name=dag_name,
                 dag_config=dag_config,
@@ -157,7 +197,7 @@ class DagFactory:
             )
             try:
                 dag: Dict[str, Union[str, DAG]] = dag_builder.build()
-                dags[dag["dag_id"]]: DAG = dag["dag"]
+                dags[dag["dag_id"]] = dag["dag"]
             except Exception as err:
                 raise DagFactoryException(f"Failed to generate dag {dag_name}. verify config is correct") from err
 
@@ -173,7 +213,7 @@ class DagFactory:
             must be passed into globals() for Airflow to import
         """
         for dag_id, dag in dags.items():
-            globals[dag_id]: DAG = dag
+            globals[dag_id] = dag
 
     def generate_dags(self, globals: Dict[str, Any]) -> None:
         """
