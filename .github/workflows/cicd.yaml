@@ -89,12 +89,12 @@ jobs:
         run: |
           hatch run tests.py${{ matrix.python-version }}-${{ matrix.airflow-version }}:test-cov
 
-      # - name: Upload coverage to Github
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: coverage-unit-test-${{ matrix.python-version }}-${{ matrix.airflow-version }}
-      #     path: .coverage
-      #     include-hidden-files: true
+      - name: Upload coverage to Github
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit-test-${{ matrix.python-version }}-${{ matrix.airflow-version }}
+          path: .coverage
+          include-hidden-files: true
 
   Run-Integration-Tests:
     runs-on: ubuntu-latest
@@ -161,12 +161,12 @@ jobs:
           CONFIG_ROOT_DIR: ${{ github.workspace }}/dags
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/examples:$PYTHONPATH
 
-      # - name: Upload coverage to Github
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: coverage-integration-test-${{ matrix.python-version }}-${{ matrix.airflow-version }}
-      #     path: .coverage
-      #     include-hidden-files: true
+      - name: Upload coverage to Github
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration-test-${{ matrix.python-version }}-${{ matrix.airflow-version }}
+          path: .coverage
+          include-hidden-files: true
 
   Code-Coverage:
     if: github.event.action != 'labeled'
@@ -194,68 +194,68 @@ jobs:
           coverage combine ./coverage/coverage*/.coverage
           coverage report
           coverage xml
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     fail_ci_if_error: true
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: coverage.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
 
-  # Deploy-Pages:
-  #   permissions:
-  #     contents: write
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - Static-Check
-  #     - Run-Unit-Tests
-  #     - Run-Integration-Tests
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         ref: ${{ github.event.pull_request.head.sha || github.ref }}
+  Deploy-Pages:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs:
+      - Static-Check
+      - Run-Unit-Tests
+      - Run-Integration-Tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         architecture: "x64"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: "x64"
 
-  #     - name: Install packages and dependencies
-  #       run: pip install hatch
+      - name: Install packages and dependencies
+        run: pip install hatch
 
-  #     - name: Deploy Docs
-  #       run: |
-  #         git config user.name "oss-integrations-bot"
-  #         git config user.email "oss-integrations-bot@astronomer.io"
+      - name: Deploy Docs
+        run: |
+          git config user.name "oss-integrations-bot"
+          git config user.email "oss-integrations-bot@astronomer.io"
 
-  #         git fetch origin gh-pages --depth=1
+          git fetch origin gh-pages --depth=1
 
-  #         if [[ $GITHUB_EVENT_NAME == "release" ]]; then
-  #             hatch run docs:gh-release
-  #         else
-  #             hatch run docs:gh-deploy
-  #         fi
+          if [[ $GITHUB_EVENT_NAME == "release" ]]; then
+              hatch run docs:gh-release
+          else
+              hatch run docs:gh-deploy
+          fi
 
-  # Publish-Package:
-  #   if: github.event_name == 'release'
-  #   name: Build and publish Python 🐍 distributions 📦 to PyPI
-  #   needs:
-  #     - Static-Check
-  #     - Run-Unit-Tests
-  #     - Run-Integration-Tests
-  #     - Deploy-Pages
-  #     - Code-Coverage
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.10'
-  #         architecture: 'x64'
-  #     - name: Verify Git Tag and package version
-  #       run: python3 ./scripts/verify_tag_and_version.py
-  #     - run: pip3 install hatch
-  #     - run: hatch build
-  #     - run: hatch publish
-  #   env:
-  #     HATCH_INDEX_USER: __token__
-  #     HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
+  Publish-Package:
+    if: github.event_name == 'release'
+    name: Build and publish Python 🐍 distributions 📦 to PyPI
+    needs:
+      - Static-Check
+      - Run-Unit-Tests
+      - Run-Integration-Tests
+      - Deploy-Pages
+      - Code-Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+      - name: Verify Git Tag and package version
+        run: python3 ./scripts/verify_tag_and_version.py
+      - run: pip3 install hatch
+      - run: hatch build
+      - run: hatch publish
+    env:
+      HATCH_INDEX_USER: __token__
+      HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
