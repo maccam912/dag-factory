@@ -12,7 +12,7 @@ import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union, Optional
 
 from airflow import DAG, configuration
 from airflow.models import BaseOperator, Variable
@@ -252,6 +252,13 @@ class DagBuilder:
             # pylint: disable=line-too-long
             raise DagFactoryConfigException(f"{self.dag_name} config is missing start_date") from err
         return dag_params
+
+    def prerender(self, dag_params: Dict[str, Any]) -> str:
+        """Return Python source for the DAG before operator instantiation."""
+        from .prerender import render_python_dag
+
+        tasks = dag_params.get("tasks", {})
+        return render_python_dag(dag_params, tasks)
 
     @staticmethod
     def make_timetable(timetable: str, timetable_params: Dict[str, Any]) -> Timetable:
@@ -771,14 +778,15 @@ class DagBuilder:
             dag_kwargs["schedule"] = dag_params.get("schedule")
 
     # pylint: disable=too-many-locals
-    def build(self) -> Dict[str, Union[str, DAG]]:
+    def build(self, dag_params: Optional[Dict[str, Any]] = None) -> Dict[str, Union[str, DAG]]:
         """
         Generates a DAG from the DAG parameters.
 
         :returns: dict with dag_id and DAG object
         :type: Dict[str, Union[str, DAG]]
         """
-        dag_params: Dict[str, Any] = self.get_dag_params()
+        if dag_params is None:
+            dag_params = self.get_dag_params()
 
         dag_kwargs: Dict[str, Any] = {}
 

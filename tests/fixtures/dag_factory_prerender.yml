@@ -1,0 +1,11 @@
+default:
+  default_args:
+    start_date: 2024-01-01
+example_dag:
+  description: prerender test
+  tasks:
+    first:
+      operator: airflow.operators.empty.EmptyOperator
+    second:
+      operator: airflow.operators.empty.EmptyOperator
+      dependencies: [first]

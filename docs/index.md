@@ -27,6 +27,7 @@ Are you new to DAG Factory? This is the place to start!
 * [Custom operators](features/custom_operators.md)
 * [Multiple configuration files](features/multiple_configuration_files.md)
 * [HttpSensor](features/http_task.md)
+* [Prerender DAG code](features/prerender.md)
 
 ## Getting help
 
