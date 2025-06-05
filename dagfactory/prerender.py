@@ -61,8 +61,6 @@ def render_python_dag(dag_params: Dict, tasks: Dict) -> str:
     for task_id, conf in tasks.items():
         for dep in conf.get("dependencies", []):
             expr = ast.Expr(value=ast.BinOp(left=task_nodes[dep], op=ast.RShift(), right=task_nodes[task_id]))
-            with_body.append(expr)
-
     with_stmt = ast.With(
         items=[ast.withitem(context_expr=dag_call, optional_vars=ast.Name(id="dag", ctx=ast.Store()))],
         body=with_body,
