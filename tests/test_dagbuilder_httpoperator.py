@@ -6,6 +6,7 @@ from pathlib import Path
 import pendulum
 import pytest
 from airflow import DAG
+from airflow.utils.module_loading import import_string
 
 from dagfactory.dagbuilder import DagBuilder
 from dagfactory.exceptions import DagFactoryException
