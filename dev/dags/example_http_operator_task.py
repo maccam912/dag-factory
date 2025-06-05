@@ -3,6 +3,7 @@ from pathlib import Path
 
 try:
     from airflow.providers.http.operators.http import HttpOperator
+
     HTTP_OPERATOR_AVAILABLE = True
 except ImportError:
     HTTP_OPERATOR_AVAILABLE = False

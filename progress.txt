@@ -1,0 +1,68 @@
+# dag-factory Code Generation Project Progress
+
+## Original Ask
+Implement a design for dag-factory that allows it to:
+1. Keep existing dynamic, in-process DAG creation functionality
+2. Add an optional "ahead-of-time code-gen" mode that generates plain .py DAG files with minimal friction for existing users
+
+## Design Approach
+The approach involves introducing a lightweight Intermediate Representation (IR) at the natural seam between YAML configuration and DAG objects. This IR will serve as a contract for both runtime DAG building and code generation.
+
+### Key Components:
+1. **IR Module**: Lightweight dataclasses to represent DAGs, Tasks, and TaskGroups
+2. **Translator**: A module to convert YAML/dict configs to the IR
+3. **DagBuilder (Existing)**: Modified to consume the IR instead of directly working with config dictionaries
+4. **CodeGenBuilder (Planned)**: New module that will generate Python code from the IR
+
+## Progress So Far
+
+### 1. Completed:
+- ✅ Created IR module (`dagfactory/ir.py`) with `DagIR`, `TaskIR`, and `TaskGroupIR` dataclasses
+- ✅ Created Translator module (`dagfactory/translator.py`) to convert YAML configs to IR
+- ✅ Added comprehensive unit tests for IR and Translator modules
+- ✅ Modified DagFactory class to use Translator to create IR first
+- ✅ Added `to_ir()` method to DagFactory to expose IR creation as a public API
+- ✅ Made changes in a backward-compatible way (all tests pass)
+
+### 2. Remaining Tasks:
+- ⬜ Create CodeGenBuilder class to generate Python code from IR
+- ⬜ Add AST-based code generation using Python's `ast` module and `ast.unparse()`
+- ⬜ Integrate Black for code formatting
+- ⬜ Add CLI interface for code generation: `dag-factory compile --config /configs/my_dag.yml --output-dir`
+- ⬜ Add tests for code generation
+- ⬜ Update documentation
+
+## Implementation Details
+
+### IR Structure
+The IR is designed to be lightweight and focused on what's needed to represent both a runtime DAG and generate code:
+
+```python
+@dataclass
+class TaskIR:
+    task_id: str
+    operator: str           # e.g. "airflow.operators.bash.BashOperator"
+    params: dict
+    dependencies: list[str] # task_ids it depends on
+
+@dataclass
+class DagIR:
+    dag_id: str
+    schedule: str | None
+    default_args: dict
+    tasks: list[TaskIR]
+    # plus extras: task_groups, datasets, etc.
+```
+
+### Next Steps
+The next phase will focus on implementing the CodeGenBuilder which will:
+1. Generate Python imports for operators
+2. Create DAG context and task definitions
+3. Set up appropriate task dependencies
+4. Format code using Black
+
+## Benefits of Current Approach
+1. Keeps runtime builder and code-gen in sync via the shared IR
+2. Creates minimal friction for existing users to adopt code generation
+3. Shields from future YAML spec changes by having a single translator
+4. Provides clean separation of concerns with well-defined interfaces
