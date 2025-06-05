@@ -1,11 +1,8 @@
 import os
+from importlib.util import find_spec
 from pathlib import Path
 
-try:
-    from airflow.providers.http.operators.http import HttpOperator
-    HTTP_OPERATOR_AVAILABLE = True
-except ImportError:
-    HTTP_OPERATOR_AVAILABLE = False
+HTTP_OPERATOR_AVAILABLE = find_spec("airflow.providers.http.operators.http") is not None
 
 # The following import is here so Airflow parses this file
 # from airflow import DAG

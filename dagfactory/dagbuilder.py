@@ -12,7 +12,7 @@ import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Any, Callable, Dict, List, Tuple, Union, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from airflow import DAG, configuration
 from airflow.models import BaseOperator, Variable
