@@ -36,7 +36,7 @@ MIN_VER_DAG_FILE_VER: dict[str, list[str]] = {
 
 # Add HTTP operator DAG to ignored files for providers-http versions without HttpOperator
 try:
-    from airflow.providers.http.operators.http import HttpOperator
+    from airflow.providers.http.operators.http import HttpOperator  # noqa: F401
 
     HTTP_OPERATOR_AVAILABLE = True
 except ImportError:
