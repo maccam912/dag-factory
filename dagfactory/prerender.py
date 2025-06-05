@@ -1,5 +1,18 @@
 import ast
 from typing import Dict
+from datetime import date, datetime
+
+try:
+    _UNPARSE = ast.unparse
+except AttributeError:  # pragma: no cover - Python <3.9
+    try:  # defer optional dependency
+        import astor
+
+        def _UNPARSE(node: ast.AST) -> str:
+            return astor.to_source(node)
+
+    except Exception as err:  # pragma: no cover - missing astor
+        raise RuntimeError("Python < 3.9 requires 'astor' for prerendering") from err
 
 
 def _make_import(module: str, name: str) -> ast.stmt:
@@ -22,6 +35,9 @@ def render_python_dag(dag_params: Dict, tasks: Dict) -> str:
         module_body.append(_make_import(mod, cls))
 
     dag_args = {k: v for k, v in dag_params.items() if k != "tasks"}
+
+    if any(isinstance(v, (date, datetime)) for v in dag_args.values()):
+        module_body.insert(0, ast.Import(names=[ast.alias(name="datetime", asname=None)]))
     dag_call = ast.Call(
         func=ast.Name(id="DAG", ctx=ast.Load()),
         args=[],
@@ -57,4 +73,4 @@ def render_python_dag(dag_params: Dict, tasks: Dict) -> str:
 
     mod = ast.Module(body=module_body, type_ignores=[])
     mod = ast.fix_missing_locations(mod)
-    return ast.unparse(mod)
+    return _UNPARSE(mod)
