@@ -36,6 +36,13 @@ MIN_VER_DAG_FILE_VER: dict[str, list[str]] = {
     "2.9": ["example_map_index_template.py"],
 }
 
+# Add HTTP operator DAG to ignored files for providers-http versions without HttpOperator
+try:
+    from airflow.providers.http.operators.http import HttpOperator  # noqa: F401
+
+    HTTP_OPERATOR_AVAILABLE = True
+except ImportError:
+    HTTP_OPERATOR_AVAILABLE = False
 
 @provide_session
 def get_session(session=None):
@@ -82,6 +89,15 @@ def get_dag_ids() -> list[str]:
 def test_example_dag(session, dag_id: str):
     dag_bag = get_dag_bag()
     dag = dag_bag.get_dag(dag_id)
+
+    # Skip http_operator_example_dag in older Airflow versions without HttpOperator
+    if dag_id == "http_operator_example_dag" and not HTTP_OPERATOR_AVAILABLE:
+        pytest.skip(f"Skipping {dag_id} because HttpOperator is not available")
+
+    # Skip http_operator_example_dag in older Airflow versions
+    # since it has compatibility issues with our connection handling
+    if dag_id == "http_operator_example_dag" and AIRFLOW_VERSION < Version("2.7.0"):
+        pytest.skip(f"Skipping {dag_id} on Airflow version {AIRFLOW_VERSION}")
 
     # This feature is available since Airflow 2.5:
     # https://airflow.apache.org/docs/apache-airflow/stable/release_notes.html#airflow-2-5-0-2022-12-02

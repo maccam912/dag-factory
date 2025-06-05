@@ -59,6 +59,7 @@ nav:
       - features/custom_operators.md
       - features/http_task.md
       - features/multiple_configuration_files.md
+      - features/prerender.md
 
   - Comparison:
       - comparison/index.md

@@ -34,6 +34,7 @@ dependencies = [
     "apache-airflow-providers-cncf-kubernetes",
     "pyyaml",
     "packaging",
+    "astor>=0.8",
 ]
 
 

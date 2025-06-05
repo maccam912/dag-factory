@@ -33,6 +33,7 @@ class DagFactory:
         config_filepath: Optional[str] = None,
         config: Optional[dict] = None,
         default_args_config_path: str = airflow_conf.get("core", "dags_folder"),
+        output_dir: Optional[str] = None,
     ) -> None:
         assert bool(config_filepath) ^ bool(config), "Either `config_filepath` or `config` should be provided"
         self.default_args_config_path = default_args_config_path
@@ -41,6 +42,7 @@ class DagFactory:
             self.config: Dict[str, Any] = DagFactory._load_config(config_filepath=config_filepath)
         if config:
             self.config: Dict[str, Any] = config
+        self.output_dir = output_dir
 
     def _global_default_args(self):
         """If a defaults.yml exists, use this as the global default arguments (to be applied to each DAG)."""
@@ -128,7 +130,7 @@ class DagFactory:
         """
         return self.config.get("default", {})
 
-    def build_dags(self) -> Dict[str, DAG]:
+    def build_dags(self, output_dir: Optional[str] = None) -> Dict[str, DAG]:
         """Build DAGs using the config file."""
         dag_configs: Dict[str, Dict[str, Any]] = self.get_dag_configs()
         global_default_args = self._global_default_args()
@@ -145,6 +147,8 @@ class DagFactory:
                 **default_config.get("default_args", {}),
             }
 
+        output_dir = output_dir or self.output_dir
+
         dags: Dict[str, Any] = {}
 
         for dag_name, dag_config in dag_configs.items():
@@ -156,7 +160,14 @@ class DagFactory:
                 yml_dag=self._serialise_config_md(dag_name, dag_config, default_config),
             )
             try:
-                dag: Dict[str, Union[str, DAG]] = dag_builder.build()
+                dag_params = dag_builder.get_dag_params()
+                if output_dir:
+                    source = dag_builder.prerender(dag_params)
+                    os.makedirs(output_dir, exist_ok=True)
+                    with open(os.path.join(output_dir, f"{dag_params['dag_id']}.py"), "w", encoding="utf-8") as f:
+                        f.write(source)
+
+                dag: Dict[str, Union[str, DAG]] = dag_builder.build(dag_params)
                 dags[dag["dag_id"]]: DAG = dag["dag"]
             except Exception as err:
                 raise DagFactoryException(f"Failed to generate dag {dag_name}: {err}") from err
